@@ -4,7 +4,7 @@ import { Web3Auth, Web3AuthOptions } from "@web3auth/modal";
 import { OpenloginAdapterOptions } from "@web3auth/openlogin-adapter";
 import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
 
-export default function initWeb3AuthModalHook(modalOptions: Web3AuthOptions, adapterOptions: OpenloginAdapterOptions, modalConfig: any) {
+export default function useWeb3AuthModal(modalOptions: Web3AuthOptions, adapterOptions: OpenloginAdapterOptions, modalConfig: any) {
     const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
     const [isModalInitialized, setIsModalInitialized] = useState<boolean>(false);
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PrimeSdk } from '@etherspot/prime-sdk';
 
-export default function getUserWalletAddressHook(primeSdk: PrimeSdk | null) {
+export default function usePrimeSdkWalletAddress(primeSdk: PrimeSdk | null) {
     const [walletAddress, setWalletAddress] = useState("");
 
     useEffect(() => {
