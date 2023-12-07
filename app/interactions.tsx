@@ -1,9 +1,11 @@
 import { Web3Auth } from "@web3auth/modal";
 import { PrimeSdk, Web3WalletProvider } from "@etherspot/prime-sdk";
+import { printOp } from "@etherspot/prime-sdk/dist/sdk/common/OperationUtils";
+
 import { ethers } from "ethers";
 import { sleep } from "./utils/Sleep";
 
-export const login = async (web3auth: Web3Auth | null, chainId: number) => {
+export const login = async (web3auth: Web3Auth, chainId: number) => {
     if (!web3auth) {
         console.log("web3auth not initialized yet");
         return;
@@ -52,7 +54,7 @@ export const whitelistAddress = async (walletAddress: string, chainId: number) =
     console.log('Value returned: ', returnedValue);
 }
 
-export const sponsorTransaction = async (primeSdk: PrimeSdk) => {
+export const sponsorTransaction = async (primeSdk: PrimeSdk, amount: string) => {
     if (!primeSdk) {
         return;
     }
@@ -61,7 +63,7 @@ export const sponsorTransaction = async (primeSdk: PrimeSdk) => {
     await primeSdk.clearUserOpsFromBatch();
 
     // add transactions to the batch
-    const transactionBatch = await primeSdk.addUserOpsToBatch({ to: "0xc4f6578c24c599F195c0758aD3D4861758d703A3", value: ethers.parseEther("0.1") });
+    const transactionBatch = await primeSdk.addUserOpsToBatch({ to: "0xc4f6578c24c599F195c0758aD3D4861758d703A3", value: ethers.parseEther(amount) });
     console.log('transactions: ', transactionBatch);
 
     // get balance of the account address
@@ -73,7 +75,7 @@ export const sponsorTransaction = async (primeSdk: PrimeSdk) => {
     //mainnet: apli_key: myApiKey
     const op = await primeSdk.estimate({ url: 'https://arka.etherspot.io/', api_key: 'arka_public_key', context: { mode: 'sponsor' } });
     // const op = await primeSdk.estimate({ url: 'https://arka.etherspot.io/', api_key: 'arka_public_key', context: { mode: 'sponsor' } });
-    console.log(op);
+    console.log(`Estimate UserOp: ${await printOp(op)}`);
 
     // sign the UserOp and sending to the bundler...
     const uoHash = await primeSdk.send(op);
@@ -88,4 +90,26 @@ export const sponsorTransaction = async (primeSdk: PrimeSdk) => {
         userOpsReceipt = await primeSdk.getUserOpReceipt(uoHash);
     }
     console.log('\x1b[33m%s\x1b[0m', `Transaction Receipt: `, userOpsReceipt);
+}
+
+export const transferNFT = async (primeSdk: PrimeSdk, to: string, tokenId: number) => {
+    const erc721Interface = new ethers.Interface([
+        'function safeTransferFrom(address _from, address _to, uint256 _tokenId)'
+    ])
+
+    const tokenAddress = "";
+    const address = await primeSdk.getCounterFactualAddress();
+    const erc721Data = erc721Interface.encodeFunctionData('safeTransferFrom', [address, to, tokenId]);
+
+    // clear the transaction batch
+    await primeSdk.clearUserOpsFromBatch();
+
+    // add transactions to the batch
+    const userOpsBatch = await primeSdk.addUserOpsToBatch({ to: tokenAddress, data: erc721Data });
+    console.log('transactions: ', userOpsBatch);
+
+    // sign transactions added to the batch
+    const op = await primeSdk.estimate();
+    console.log(`Estimated UserOp: ${await printOp(op)}`);
+
 }
