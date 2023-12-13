@@ -7,7 +7,6 @@ import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
 export default function useWeb3AuthModal(modalOptions: Web3AuthOptions, adapterOptions: OpenloginAdapterOptions, modalConfig: any) {
     const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
     const [isModalInitialized, setIsModalInitialized] = useState<boolean>(false);
-
     useEffect(() => {
         async function getWeb3Auth() {
             if (web3auth)

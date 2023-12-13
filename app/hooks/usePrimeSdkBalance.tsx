@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { PrimeSdk } from '@etherspot/prime-sdk';
 
-
-
 export default function usePrimeSdkBalance(primeSdk: PrimeSdk | null) {
     const [nativeBalance, setBalance] = useState("");
 
