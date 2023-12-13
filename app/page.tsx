@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
 import { SyntheticEvent, useState, useEffect } from "react";
-import { PrimeSdk } from '@etherspot/prime-sdk';
+import { PrimeSdk } from "@etherspot/prime-sdk";
 import { modalConfig } from "./options/modalConfig";
 import { modalOptions } from "./options/modalOptionsConfig";
 import { adapterOptions } from "./options/adapterOptions";
@@ -19,10 +19,10 @@ const chainIdNum = 80001;
 
 const tokenAddress = "0xeF4D2a75282Cb50d61eFeC436A4501d65f1Bc04D";
 const erc721Interface = new ethers.Interface([
-  'function transfer(address to, uint256 value) returns(bool)',
-  'function mint()',
-  'function balanceOf(address owner) view returns (uint256)',
-  'function decimals() view returns (uint256)'
+  "function transfer(address to, uint256 value) returns(bool)",
+  "function mint()",
+  "function balanceOf(address owner) view returns (uint256)",
+  "function decimals() view returns (uint256)"
 ])
 
 export default function Home() {
@@ -84,14 +84,14 @@ export default function Home() {
 
     const decimals = await erc20Instance.decimals();
 
-    const transactionData = erc20Instance.interface.encodeFunctionData('transfer', [target.myInput2.value, ethers.parseUnits("250", decimals)])
+    const transactionData = erc20Instance.interface.encodeFunctionData("transfer", [target.myInput2.value, ethers.parseUnits("250", decimals)])
 
     // clear the transaction batch
     await primeSdk.clearUserOpsFromBatch();
 
     // add transactions to the batch
     const userOpsBatch = await primeSdk.addUserOpsToBatch({ to: tokenAddress, data: transactionData });
-    console.log('transactions: ', userOpsBatch);
+    console.log("transactions: ", userOpsBatch);
 
     // sign transactions added to the batch
     const op = await primeSdk.estimate();
@@ -102,14 +102,14 @@ export default function Home() {
     console.log(`UserOpHash: ${uoHash}`);
 
     // get transaction hash...
-    console.log('Waiting for transaction...');
+    console.log("Waiting for transaction...");
     let userOpsReceipt = null;
     const timeout = Date.now() + 60000; // 1 minute timeout
     while ((userOpsReceipt == null) && (Date.now() < timeout)) {
       await sleep(2);
       userOpsReceipt = await primeSdk.getUserOpReceipt(uoHash);
     }
-    console.log('\x1b[33m%s\x1b[0m', `Transaction Receipt: `, userOpsReceipt);
+    console.log("\x1b[33m%s\x1b[0m", `Transaction Receipt: `, userOpsReceipt);
     await test();
     setIsTransferring(false);
   }
@@ -143,7 +143,7 @@ export default function Home() {
 
           <p className="my-5 text-4xl">Whitelist</p>
 
-          <p>User wallet needs to be whitelisted before sponsored transactions can happen. I'm thinking that you can whitelist when user creates account or when they KYC. *Whitelisting does not cost any gas, it is an offchain call to an etherspot API.</p>
+          <p>User wallet needs to be whitelisted before sponsored transactions can happen. Im thinking that you can whitelist when user creates account or when they KYC. *Whitelisting does not cost any gas, it is an offchain call to an etherspot API.</p>
           <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded" onClick={async () => { whitelistAddress(walletAddress, chainIdNum) }}>Whitelist</button>
           {/* <p className="my-5">{"-----------------------------------"}</p> */}
 
@@ -166,14 +166,14 @@ export default function Home() {
           <button onClick={async () => {
 
             setIsMinting(true);
-            const erc721Data = erc721Interface.encodeFunctionData('mint');
+            const erc721Data = erc721Interface.encodeFunctionData("mint");
 
             // clear the transaction batch
             await primeSdk.clearUserOpsFromBatch();
 
             // add transactions to the batch
             const userOpsBatch = await primeSdk.addUserOpsToBatch({ to: tokenAddress, data: erc721Data });
-            console.log('transactions: ', userOpsBatch);
+            console.log("transactions: ", userOpsBatch);
 
             // sign transactions added to the batch
             const op = await primeSdk.estimate();
@@ -184,14 +184,14 @@ export default function Home() {
             console.log(`UserOpHash: ${uoHash}`);
 
             // get transaction hash...
-            console.log('Waiting for transaction...');
+            console.log("Waiting for transaction...");
             let userOpsReceipt = null;
             const timeout = Date.now() + 60000; // 1 minute timeout
             while ((userOpsReceipt == null) && (Date.now() < timeout)) {
               await sleep(2);
               userOpsReceipt = await primeSdk.getUserOpReceipt(uoHash);
             }
-            console.log('\x1b[33m%s\x1b[0m', `Transaction Receipt: `, userOpsReceipt);
+            console.log("\x1b[33m%s\x1b[0m", `Transaction Receipt: `, userOpsReceipt);
             await test();
             setIsMinting(false);
 
