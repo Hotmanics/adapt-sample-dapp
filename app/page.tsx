@@ -5,7 +5,7 @@ import { PrimeSdk } from "@etherspot/prime-sdk";
 import { modalConfig } from "./options/modalConfig";
 import { modalOptions } from "./options/modalOptionsConfig";
 import { adapterOptions } from "./options/adapterOptions";
-import { login, logout, sponsorTransaction, whitelistAddress } from "./interactions";
+import { login, logout, sponsorTransaction, whitelistAddress, checkIfWhitelisted } from "./interactions";
 import { ethers, getDefaultProvider } from "ethers";
 
 import usePrimeSdkBalance from "./hooks/usePrimeSdkBalance";
@@ -36,6 +36,10 @@ export default function Home() {
   const [balance, setBalance] = useState("0");
   const [isMinting, setIsMinting] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [isTransferringEther, setIsTransferringEther] = useState(false);
+  const [isCheckingWhitelist, setIsCheckingWhitelist] = useState(false);
+
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
 
   async function test() {
     if (!primeSdk)
@@ -53,8 +57,21 @@ export default function Home() {
     setBalance(bal);
   }
 
+  async function getWhitelist() {
+    if (!primeSdk)
+      return;
+
+    const address = await primeSdk?.getCounterFactualAddress();
+
+    let result = await checkIfWhitelisted(address!, chainIdNum);
+    console.log(result);
+    // setIsWhitelisted(result);
+  }
+
   useEffect(() => {
     test();
+    getWhitelist();
+
   }, [primeSdk])
 
   async function handleSubmit(event: any) {
@@ -64,8 +81,10 @@ export default function Home() {
     event.preventDefault();
     const target = event.target;
 
+    setIsTransferringEther(true);
     await sponsorTransaction(primeSdk, target.myInput.value); //sends ether
     await getBalance();
+    setIsTransferringEther(false);
   }
 
   async function handleSendERC20Token(event: any) {
@@ -84,7 +103,7 @@ export default function Home() {
 
     const decimals = await erc20Instance.decimals();
 
-    const transactionData = erc20Instance.interface.encodeFunctionData("transfer", [target.myInput2.value, ethers.parseUnits("250", decimals)])
+    const transactionData = erc20Instance.interface.encodeFunctionData("transfer", [target.myInput2.value, ethers.parseUnits("50", decimals)])
 
     // clear the transaction batch
     await primeSdk.clearUserOpsFromBatch();
@@ -135,6 +154,13 @@ export default function Home() {
                 <p className="my-5">Network: {chainIdNum === 80001 ? "Polygon (Testnet)" : "Unknown"}</p>
                 <p className="my-5">{walletAddress}</p>
                 <p className="my-5">Balance: {nativeBalance}</p>
+
+                {
+                  isWhitelisted ? <p className="my-5 text-[#00FF00]">Whitelisted</p>
+                    :
+                    <p className="my-5 text-red"></p>
+                }
+
               </div>
           }
 
@@ -142,26 +168,49 @@ export default function Home() {
           {/* <p className="my-5">{"-----------------------------------"}</p> */}
 
           <p className="my-5 text-4xl">Whitelist</p>
-
           <p>User wallet needs to be whitelisted before sponsored transactions can happen. Im thinking that you can whitelist when user creates account or when they KYC. *Whitelisting does not cost any gas, it is an offchain call to an etherspot API.</p>
-          <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded" onClick={async () => { whitelistAddress(walletAddress, chainIdNum) }}>Whitelist</button>
+          {
+            isCheckingWhitelist ? <p className="my-5">Checking whitelist...</p> :
+              <div>
+                <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded" onClick={async () => {
+                  setIsCheckingWhitelist(true);
+                  let result = await whitelistAddress(walletAddress, chainIdNum);
+                  console.log(result);
+
+                  const address = await primeSdk?.getCounterFactualAddress();
+
+                  if (result.error === `Error: ${address} already whitelisted` || result.message.contains("Successfully whitelisted with transaction Hash")) {
+                    setIsWhitelisted(true);
+                  }
+
+                  setIsCheckingWhitelist(false);
+
+                  // setIsWhitelisted(true)
+
+                }}>Whitelist / Check Whitelist</button>
+              </div>
+          }
+
           {/* <p className="my-5">{"-----------------------------------"}</p> */}
 
-          <p className="my-5 text-4xl">Send Ether</p>
+          {
+            isTransferringEther ? <p> Transferring...</p> :
+              <div>
+                <p className="my-5 text-4xl">Send Ether</p>
+                <form method="post" onSubmit={handleSubmit}>
+                  <p>Send ether through a sponsored transaction</p>
+                  <input name="myInput" defaultValue="0.01" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+                  <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded">Submit</button>
+                </form>
+              </div>
+          }
 
-          <form method="post" onSubmit={handleSubmit}>
-            <p>Send ether through a sponsored transaction</p>
-            <input name="myInput" defaultValue="0.01" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-            <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded">Submit</button>
-          </form>
 
 
           {/* <p className="my-5">{"-----------------------------------"}</p> */}
           <p className="my-5 text-4xl">ERC20 Interactions</p>
           <p className="my-5">{"Token Address: " + tokenAddress}</p>
           <p className="my-5">{"Your Balance: " + balance}</p>
-
-          <p className="my-5">{"--------"}</p>
 
           <button onClick={async () => {
 
@@ -202,14 +251,17 @@ export default function Home() {
           }
           <p className="my-5">{"--------"}</p>
 
-          <form method="post" onSubmit={handleSendERC20Token}>
-            <p>Send 250 tokens to an address</p>
-            <input name="myInput2" defaultValue="0x" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
-            <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded">Submit</button>
-          </form>
-
-          <p className="my-5">{"-----------------------------------"}</p>
-
+          {
+            isTransferring ? <p>Transferring...</p>
+              :
+              <div>
+                <form method="post" onSubmit={handleSendERC20Token}>
+                  <p>Send 50 tokens to an address</p>
+                  <input name="myInput2" defaultValue="0x" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" />
+                  <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 my-2 mx-1 rounded">Submit</button>
+                </form>
+              </div>
+          }
 
         </div>
     } else {
