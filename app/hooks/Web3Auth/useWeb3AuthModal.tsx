@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { PrimeSdk } from '@etherspot/prime-sdk';
 import { Web3Auth, Web3AuthOptions } from "@web3auth/modal";
 import { OpenloginAdapterOptions } from "@web3auth/openlogin-adapter";
 import { OpenloginAdapter } from "@web3auth/openlogin-adapter";

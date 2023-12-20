@@ -3,7 +3,8 @@ import { PrimeSdk, Web3WalletProvider } from "@etherspot/prime-sdk";
 import { printOp } from "@etherspot/prime-sdk/dist/sdk/common/OperationUtils";
 
 import { ethers } from "ethers";
-import { sleep } from "./utils/Sleep";
+import { sleep } from "../utils/Sleep";
+import { AbstractProvider } from "ethers";
 
 export const login = async (web3auth: Web3Auth, chainId: number) => {
     if (!web3auth) {
@@ -52,7 +53,6 @@ export const whitelistAddress = async (walletAddress: string, chainId: number) =
             console.log(err);
             // throw new Error(JSON.stringify(err.response))
         });
-    console.log('Value returned: ', returnedValue);
     return returnedValue;
 }
 
@@ -79,11 +79,7 @@ export const checkIfWhitelisted = async (accountAddress: string, chainId: number
     return returnedValue;
 }
 
-export const sponsorTransaction = async (primeSdk: PrimeSdk, amount: string) => {
-    if (!primeSdk) {
-        return;
-    }
-
+export const sendEther = async (primeSdk: PrimeSdk, amount: string) => {
     // clear the transaction batch
     await primeSdk.clearUserOpsFromBatch();
 
@@ -137,4 +133,72 @@ export const transferNFT = async (primeSdk: PrimeSdk, to: string, tokenId: numbe
     const op = await primeSdk.estimate();
     console.log(`Estimated UserOp: ${await printOp(op)}`);
 
+}
+
+export const transferErc20Tokens = async (primeSdk: PrimeSdk, tokenAddress: string, provider: AbstractProvider, to: string, amount: string) => {
+    const contractInterface = new ethers.Interface([
+        "function transfer(address to, uint256 value) returns(bool)",
+        // "function mint()",
+        // "function balanceOf(address owner) view returns (uint256)",
+        "function decimals() view returns (uint256)"
+    ])
+
+    const erc20Instance = new ethers.Contract(tokenAddress, contractInterface, provider);
+
+    const decimals = await erc20Instance.decimals();
+
+    const transactionData = erc20Instance.interface.encodeFunctionData("transfer", [to, ethers.parseUnits(amount, decimals)])
+
+    await primeSdk.clearUserOpsFromBatch();
+
+    await primeSdk.addUserOpsToBatch({ to: tokenAddress, data: transactionData });
+
+    const op = await primeSdk.estimate();
+    const uoHash = await primeSdk.send(op);
+
+    let userOpsReceipt = null;
+    const timeout = Date.now() + 60000; // 1 minute timeout
+    while ((userOpsReceipt == null) && (Date.now() < timeout)) {
+        await sleep(2);
+        userOpsReceipt = await primeSdk.getUserOpReceipt(uoHash);
+    }
+    console.log("\x1b[33m%s\x1b[0m", `Transaction Receipt: `, userOpsReceipt);
+    return userOpsReceipt;
+}
+
+export const mintErc20Tokens = async (primeSdk: PrimeSdk, tokenAddress: string) => {
+    const contractInterface = new ethers.Interface([
+        "function transfer(address to, uint256 value) returns(bool)",
+        "function mint()",
+        // "function balanceOf(address owner) view returns (uint256)",
+        "function decimals() view returns (uint256)"
+    ])
+
+    const data = contractInterface.encodeFunctionData("mint");
+
+    // clear the transaction batch
+    await primeSdk.clearUserOpsFromBatch();
+
+    // add transactions to the batch
+    const userOpsBatch = await primeSdk.addUserOpsToBatch({ to: tokenAddress, data });
+    console.log("transactions: ", userOpsBatch);
+
+    // sign transactions added to the batch
+    const op = await primeSdk.estimate();
+    console.log(`Estimated UserOp: ${await printOp(op)}`);
+
+    // sign the userOps and sending to the bundler...
+    const uoHash = await primeSdk.send(op);
+    console.log(`UserOpHash: ${uoHash}`);
+
+    // get transaction hash...
+    console.log("Waiting for transaction...");
+    let userOpsReceipt = null;
+    const timeout = Date.now() + 60000; // 1 minute timeout
+    while ((userOpsReceipt == null) && (Date.now() < timeout)) {
+        await sleep(2);
+        userOpsReceipt = await primeSdk.getUserOpReceipt(uoHash);
+    }
+    console.log("\x1b[33m%s\x1b[0m", `Transaction Receipt: `, userOpsReceipt);
+    return userOpsReceipt;
 }
